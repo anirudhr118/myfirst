@@ -1,0 +1,2 @@
+ssh -i "aws.pem" ubuntu@ec2-3-233-232-180.compute-1.amazonaws.com
+curl -v -d '{"userName":"jdoe", "firstName":"John", "lastName":"Doe", "age":"35"}' -H "Content-Type: application/json" -X POST    https://g9gsorvygh.execute-api.us-east-1.amazonaws.com/prod/users

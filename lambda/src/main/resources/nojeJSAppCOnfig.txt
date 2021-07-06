@@ -1,0 +1,112 @@
+const http = require('http');
+const AWS = require('aws-sdk');
+const appconfig = new AWS.AppConfig({ apiVersion: '2019-10-09' });
+exports.handler = async (event) => {
+   
+  const res = await new Promise((resolve, reject) => {
+    http.get(
+      "http://localhost:2772/applications/AppConfigLab/environments/AppConfigLabAPIGatewayDevelopment/configurations/AppConfigLabHostedConfigurationProfile", 
+      resolve
+    );
+  });
+  
+  const params = {
+  Application: 'AppConfigLab',
+  ClientId: 'Lamda',
+  Configuration: 'AppConfigLabHostedConfigurationProfile',
+  Environment: 'AppConfigLabAPIGatewayDevelopment'
+};
+ const appConfigResponse =  await appconfig.getConfiguration(params).promise();
+ const configData = Buffer.from(appConfigResponse.Content,'base64').toString('ascii');
+  let result = getServices();
+   
+  const parsedConfigData = JSON.parse(configData);
+          
+          console.log("**************APP Config Details*****************************");
+            console.log("brand: " + parsedConfigData.brand);
+            console.log("minTransactionAmount: " + parsedConfigData.minTransactionAmount);
+            console.log("maxTransactiontrAmount: " + parsedConfigData.maxTransactiontrAmount);
+            console.log("minBalanceAmount: " + parsedConfigData.minBalanceAmount);
+            console.log("maxBalanceAmount: " + parsedConfigData.maxBalanceAmount);
+          console.log("*******************************************");
+
+
+let isValdiationFail=false;
+let responselist=result[0];
+let errorList=[];
+var i;
+let errorMsg="";
+if(parsedConfigData !=null){
+  
+  for( i=0;i<responselist.rtrParameters.length;i++){
+     
+    
+    if(parsedConfigData.brand == responselist.rtrParameters[i].brand){
+     
+        if(parsedConfigData.minTransactionAmount > responselist.rtrParameters[i].transactionLimits[0].minTransactionAmount 
+          || parsedConfigData.maxTransactiontrAmount < responselist.rtrParameters[i].transactionLimits[0].maxTransactiontrAmount){
+          isValdiationFail = true; 
+          errorMsg = "Validation fail for brand "+parsedConfigData.brand +" transactionLimits allowed minimun limit is: "+parsedConfigData.minTransactionAmount + " and maximum limit is: "+ parsedConfigData.maxTransactiontrAmount ;
+          errorList.push(errorMsg);
+            
+          }
+        if(parsedConfigData.minBalanceAmount > responselist.rtrParameters[i].balanceLimits[0].minBalanceAmount 
+        || parsedConfigData.maxBalanceAmount < responselist.rtrParameters[i].balanceLimits[0].maxBalanceAmount){
+          isValdiationFail = true; 
+          errorMsg = "Validation fail for brand "+parsedConfigData.brand +" balanceLimits allowed minimun limit is: "+parsedConfigData.minBalanceAmount + "and maximum limit is: "+ parsedConfigData.maxBalanceAmount;
+          errorList.push(errorMsg);
+          
+        }
+      
+    }
+   
+  }
+   console.log("isValdiationFail : "+isValdiationFail);
+  
+  if(isValdiationFail){
+    errorMsg ="AppConfig Validation Failed : "+errorMsg;
+    result[0]=errorList;
+  }
+  
+  
+}
+
+  
+  const response = {
+    statusCode: 200,
+    body: result,
+  };
+  return response;
+};
+
+
+
+function getServices() {
+  return [
+    {
+	"rtrParameters": [{
+		"brand": "Boost",
+		"transactionLimits": [{
+			"minTransactionAmount": "0",
+			"maxTransactiontrAmount": "1000"
+		}],
+		"balanceLimits": [{
+			"minBalanceAmount": "5",
+			"maxBalanceAmount": "350"
+		}]
+	},
+	
+	{
+		"brand": "Republic",
+		"transactionLimits": [{
+			"minTransactionAmount": "0",
+			"maxTransactiontrAmount": "100"
+		}],
+		"balanceLimits": [{
+			"minBalanceAmount": "5",
+			"maxBalanceAmount": "350"
+		}]
+	}]
+}
+  ];
+}
